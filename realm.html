@@ -1204,6 +1204,16 @@ function daysLeft(){
 }
 /* a truce buys peace, not time — a day under truce is a day struck from the campaign */
 function truceCount(){return Object.keys(state.truce||{}).length}
+function truceAheadCount(){
+  const t=truceDays();const e=new Date(endISO()+'T00:00:00');
+  const n=new Date();n.setHours(0,0,0,0);let k=0;const d=new Date(n);
+  while(d<=e){if(t[isoOf(d)])k++;d.setDate(d.getDate()+1);}
+  return k;
+}
+function calendarDaysLeft(){
+  const e=new Date(endISO()+'T00:00:00');const n=new Date();n.setHours(0,0,0,0);
+  return Math.max(0,Math.round((e-n)/86400000));
+}
 function workingDaysLeft(){
   const t=truceDays();const e=new Date(endISO()+'T00:00:00');
   const n=new Date();n.setHours(0,0,0,0);
@@ -2412,7 +2422,13 @@ function renderBoss(){
     <div class="host-num"><span>${broken?'ROUTED':remaining+' still stand'}</span><span>${dealt} renown dealt</span></div>
     <div class="host-note">${broken
       ?`Host broken — <b>every blow now lands on ${cur.b.name}</b>${over>0?` (+${over} so far)`:''}. A fresh host musters at dawn.`
-      :`Break the host to reach the warlord. Left standing at dusk, it assaults your walls.`}</div>`;
+      :`Break the host to reach the warlord. Left standing at dusk, it assaults your walls.`}</div>
+    <div class="host-note" style="opacity:.72;margin-top:7px;font-size:12.5px">
+      <b>WHY ${host}:</b> ${remainingDatedXP()} renown still owed &divide; ${workingDaysLeft()} day${workingDaysLeft()>1?'s':''} to ${endISO()}
+      &times; ${cur.b.press} press = ${host}.
+      ${truceAheadCount()>0?`<br><b style="color:var(--amber)">${truceAheadCount()} day${truceAheadCount()>1?'s are':' is'} under truce and not counted</b> — truces shrink the road, so the host grows.`:''}
+      ${calendarDaysLeft()<14?`<br><b style="color:var(--crimson)">Only ${calendarDaysLeft()} calendar days remain.</b> Push MUST END BY out and the host falls at once.`:''}
+    </div>`;
   const hpLeft=cur.hp-cur.dealt,pct=hpLeft/cur.hp*100;
   const idx=BOSS_RANGES.findIndex(r=>r.b.name===cur.b.name);
   const taunt=cur.b.taunts[Math.floor((cur.dealt/cur.hp)*cur.b.taunts.length)]||cur.b.taunts[0];
@@ -3485,21 +3501,61 @@ document.getElementById('resetBtn').addEventListener('click',async()=>{
 })();
 
 /* ================= SAVE TRANSFER ================= */
+/* everything the realm knows, wrapped with a manifest you can read without opening the JSON */
+function saveManifest(){
+  const done=Object.keys(state.done||{}).length;
+  return {
+    honoured:done,
+    of:ITEMS.length,
+    renown:earnedXP(),
+    rank:levelInfo(earnedXP()).lvl,
+    citadel:baseHP()+'/'+BASE_MAX,
+    rubble:Math.max(0,(state.dmg||0)-BASE_MAX),
+    braziers:coresLeft()+'/'+MAX_CORES,
+    morale:morale(),
+    seals_unspent:tokenBalance(),
+    seals_spent:state.spent||0,
+    works_built:worksBuilt(),
+    yard_days:(state.gymDays||[]).length,
+    yard_last_gap:gymLastGap(),
+    forge_days:(state.forgeDays||[]).length,
+    forge_last_gap:forgeLastGap(),
+    rest_nights:(state.restDays||[]).length,
+    banner_damage:state.bossDmg||0,
+    days_logged:Object.keys(state.settled||{}).length,
+    truce_days:Object.keys(state.truce||{}).length,
+    campaign:(state.start||'?')+' → '+endISO(),
+    required_per_day:Math.round(dailyScheduledXP())
+  };
+}
+function savePayload(){
+  return {
+    realm:'R.E.A.L.M.',
+    format:2,
+    written:new Date().toISOString(),
+    manifest:saveManifest(),
+    state:state
+  };
+}
+function manifestLines(m){
+  return `${m.honoured}/${m.of} decrees · ${m.renown} renown · rank ${m.rank} · citadel ${m.citadel} · ♦${m.braziers} · morale ${m.morale} · `+
+         `⚜${m.seals_unspent} unspent, ${m.works_built} works · yard ${m.yard_days}d · forge ${m.forge_days}d · ${m.days_logged} days logged`;
+}
 document.getElementById('exportBtn').addEventListener('click',async()=>{
-  const data=JSON.stringify(state);
+  const data=JSON.stringify(savePayload());
   try{
     await navigator.clipboard.writeText(data);
-    logMsg('<b style="color:#6E9B4F">SAVE SCRIBED</b> — copied to the clipboard. Present it to RESTORE SAVE on your other device.');
+    logMsg('<b style="color:#6E9B4F">SAVE SCRIBED</b> — copied to the clipboard. '+manifestLines(saveManifest()));
   }catch(e){prompt('Copy this royal writ:',data);}
 });
 document.getElementById('dlBtn').addEventListener('click',()=>{
-  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify(savePayload(),null,2)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   a.download='realm-save-'+todayISO()+'.json';
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-  logMsg('<b style="color:#6E9B4F">⬇ SAVE WRITTEN TO FILE.</b> Carry it to any device and use LOAD FROM FILE.');
+  logMsg('<b style="color:#6E9B4F">⬇ SAVE WRITTEN TO FILE.</b> '+manifestLines(saveManifest()));
 });
 document.getElementById('upBtn').addEventListener('click',()=>document.getElementById('upFile').click());
 document.getElementById('upFile').addEventListener('change',e=>{
@@ -3507,9 +3563,17 @@ document.getElementById('upFile').addEventListener('change',e=>{
   if(!f)return;
   const r=new FileReader();
   r.onload=()=>{
+    let stage='reading';
     try{
-      const o=JSON.parse(r.result);
-      if(!o||!o.start||typeof o.done!=='object')throw new Error('bad save');
+      stage='parsing the JSON';
+      const raw=JSON.parse(r.result);
+      stage='finding the campaign';
+      /* accept both the wrapped format and a bare state from older saves */
+      const o=(raw&&raw.state&&raw.state.start)?raw.state:raw;
+      if(!o||typeof o!=='object')throw new Error('the file holds no object');
+      if(!o.start)throw new Error('no campaign start date inside');
+      if(typeof o.done!=='object')throw new Error('no record of honoured decrees inside');
+      stage='restoring';
       state=o;
       if(!state.gymDays)state.gymDays=[];if(!state.gymStart)state.gymStart=todayISO();
       if(!state.forgeDays)state.forgeDays=[];if(!state.forgeStart)state.forgeStart=todayISO();
@@ -3522,8 +3586,13 @@ document.getElementById('upFile').addEventListener('change',e=>{
       document.getElementById('startDate').value=state.start;
       document.getElementById('endDate').value=endISO();
       renderAll();
-      logMsg('<b style="color:#6E9B4F">⬆ SAVE LOADED FROM FILE.</b> The campaign is restored on this device.');
-    }catch(err){logMsg('<b style="color:#C03038">FILE REJECTED.</b> That was not a valid realm save.');}
+      logMsg('<b style="color:#6E9B4F">⬆ SAVE LOADED FROM FILE.</b> '+manifestLines(saveManifest()));
+      proclaim(`⬆ THE ROLLS ARE RESTORED. ${manifestLines(saveManifest())}`,'');
+    }catch(err){
+      logMsg('<b style="color:#C03038">FILE REJECTED</b> while '+stage+' — '+err.message+'.');
+      alert('That save could not be read.\n\nFailed while '+stage+':\n'+err.message+
+        '\n\nA valid save begins with {"realm":"R.E.A.L.M." or {"start":"2026-...');
+    }
   };
   r.readAsText(f);
   e.target.value='';
