@@ -1390,12 +1390,14 @@ function taskXpOn(iso){
   if(anyDecree&&(state.restDays||[]).includes(iso))x+=REST_XP;
   return x;
 }
-function gymLoggedToday(){return (state.gymDays||[]).includes(todayISO())}
+function gymLoggedOn(iso){return (state.gymDays||[]).includes(iso)}
+function gymLoggedToday(){return gymLoggedOn(todayISO())}
 /* ===== THE FORGE — hands on the iron steed, every 4 days ===== */
 /* ===== THE STUDY — a paper, a chapter, a tutorial: every 3 days ===== */
 function paperLoggedToday(){return (state.paperDays||[]).includes(todayISO())}
 /* ===== THE WATCH IS SET — end the day at a decent hour ===== */
-function restedToday(){return (state.restDays||[]).includes(todayISO())}
+function restedOn(iso){return (state.restDays||[]).includes(iso)}
+function restedToday(){return restedOn(todayISO())}
 function dawnMins(){return typeof state.dawn==='number'?state.dawn:7*60}
 /* after the watch is set, nothing more may be honoured until dawn */
 function watchClosed(){
@@ -1417,7 +1419,8 @@ function paperLastGap(){
 }
 function paperExpected(){return Math.max(0,Math.floor((daysSince(state.paperStart||todayISO())-(state.gymTruce||0))/PAPER_CADENCE))}
 function paperMissed(){return 0}   /* the Study is retired — it can no longer cost anything */
-function forgeLoggedToday(){return (state.forgeDays||[]).includes(todayISO())}
+function forgeLoggedOn(iso){return (state.forgeDays||[]).includes(iso)}
+function forgeLoggedToday(){return forgeLoggedOn(todayISO())}
 function forgeLastGap(){
   const fd=state.forgeDays||[];
   /* back-dated entries land at the end of the list, so take the latest DATE, not the last element */
@@ -2809,7 +2812,7 @@ function renderShop(){
 }
 function renderPaper(){}   /* the Study is retired */
 function renderForge(){
-  const gap=forgeLastGap(),missed=forgeMissed(),logged=forgeLoggedToday();
+  const gap=forgeLastGap(),missed=forgeMissed(),logged=forgeLoggedOn(logDate),onPast=(logDate!==todayISO());
   const inFail=!away()&&gap>FORGE_CADENCE;
   const toWork=Math.max(0,FORGE_CADENCE-gap);
   const ok=gap<FORGE_CADENCE;
@@ -2822,11 +2825,11 @@ function renderForge(){
     <span style="color:var(--verdant);font-style:italic">Any hands-on work counts: CAD, printing, wiring, assembly, debugging. Its ${FORGE_XP} renown joins the day's battle on its own — the forge is work, not upkeep.</span>`;
   const b=document.getElementById('forgeBtn');
   b.disabled=false;                                    /* stays live so a mis-tap can be struck */
-  b.textContent=logged?'WORKED ✓ — TAP TO STRIKE IT':`WORK THE FORGE TODAY (+${FORGE_XP} RENOWN)`;
+  b.textContent=logged?('WORKED ✓ '+(onPast?'ON '+logDate:'')+' — TAP TO STRIKE IT'):(onPast?`WORK THE FORGE ON ${logDate} (+${FORGE_XP})`:`WORK THE FORGE TODAY (+${FORGE_XP} RENOWN)`);
   b.style.opacity=logged?.55:1;
 }
 function renderGym(){
-  const gap=gymLastGap(),missed=gymMissed(),logged=gymLoggedToday();
+  const gap=gymLastGap(),missed=gymMissed(),logged=gymLoggedOn(logDate),onPast=(logDate!==todayISO());
   const inFail=!away()&&gap>GYM_CADENCE;
   const toTrain=Math.max(0,GYM_CADENCE-gap);
   const ok=gap<GYM_CADENCE;
@@ -2844,7 +2847,7 @@ function renderGym(){
   ab.style.color=away()?'var(--gold-bright)':'';
   const btn=document.getElementById('gymBtn');
   btn.disabled=false;                                  /* stays live so a mis-tap can be struck */
-  btn.textContent=logged?'TRAINED ✓ — TAP TO STRIKE IT':`TRAIN TODAY (+${GYM_XP} RENOWN)`;
+  btn.textContent=logged?('TRAINED ✓ '+(onPast?'ON '+logDate:'')+' — TAP TO STRIKE IT'):(onPast?`TRAIN ON ${logDate} (+${GYM_XP})`:`TRAIN TODAY (+${GYM_XP} RENOWN)`);
   btn.style.opacity=logged?.55:1;
 }
 function renderFall(){
@@ -3045,41 +3048,32 @@ document.addEventListener('click',e=>{
     return;
   }
   const fg=e.target.closest('#forgeBtn');
-  if(fg&&!fg.disabled&&!watchClosed()&&!forgeLoggedToday()){
-    state.forgeDays=state.forgeDays||[];
-    state.forgeDays.push(todayISO());
-    repair(repairValue());
-    proclaim(`⚒ HANDS ON THE IRON STEED. The forge rings and ${FORGE_XP} renown goes straight into today's line — a day at the anvil is a day fought.`,'');
-    logMsg(`<b style="color:#6E9B4F">⚒ FORGE WORKED.</b> +${FORGE_XP} renown · walls +${repairValue()}.`);
-    save();renderAll();
-    return;
-  }
-  else if(fg&&!fg.disabled&&forgeLoggedToday()){
-    if(!confirm('Strike today\'s work at the forge from the record?\n\nThe renown and the repair are taken back.'))return;
-    state.forgeDays=(state.forgeDays||[]).filter(d=>d!==todayISO());
-    damageBase(repairValue());
-    save();renderAll();
-    logMsg('<b>The forge is struck from the record.</b>');
+  if(fg&&!fg.disabled&&!watchClosed()){
+    const on=forgeLoggedOn(logDate), when=logDate, past=(when!==todayISO());
+    if(on){
+      if(!confirm('Strike the forge from '+when+'?\n\nThe renown and the repair are taken back.'))return;
+      commitToggle('FORGE');
+      logMsg('<b>The forge is struck from '+when+'.</b>');
+      return;
+    }
+    commitToggle('FORGE');
+    proclaim(`⚒ HANDS ON THE IRON STEED${past?' — recorded for '+when:''}. The forge rings and ${FORGE_XP} renown goes into that day's line — a day at the anvil is a day fought.`,'');
+    logMsg(`<b style="color:#6E9B4F">⚒ FORGE WORKED.</b> +${FORGE_XP} renown${past?' <b style="color:#D98E32">(recorded '+when+')</b>':' · walls +'+repairValue()}.`);
     return;
   }
   const gym=e.target.closest('#gymBtn');
-  if(gym&&!gym.disabled&&!watchClosed()&&!gymLoggedToday()){
-    state.gymDays=state.gymDays||[];
-    state.gymDays.push(todayISO());
-    repair(REPAIR);
-    proclaim(activeToday()
-      ?`The scholar returns from the training yard and the garrison forms up beside him — ${GYM_XP} renown joins today's line against the host.`
-      :`The scholar takes the training yard. The brazier burns steady. Honor a single decree today and the garrison marches with you; until then they only pace the walls.`,'');
-    logMsg(`<b style="color:#6E9B4F">TRAINING KEPT.</b> +${GYM_XP} renown · walls +${REPAIR} · the brazier burns on. Decrees still required today.`);
-    save();renderAll();
-  }
-  else if(gym&&!gym.disabled&&gymLoggedToday()){
-    /* pressed by mistake — strike it from the record */
-    if(!confirm('Strike today\'s session at the training yard from the record?\n\nThe renown and the repair are taken back, and the yard falls due again.'))return;
-    state.gymDays=(state.gymDays||[]).filter(d=>d!==todayISO());
-    damageBase(REPAIR);
-    save();renderAll();
-    logMsg('<b>Training struck from the record.</b> The yard falls due again.');
+  if(gym&&!gym.disabled&&!watchClosed()){
+    const on=gymLoggedOn(logDate), when=logDate, past=(when!==todayISO());
+    if(on){
+      if(!confirm('Strike the training yard from '+when+'?\n\nThe renown and the repair are taken back, and the yard falls due again.'))return;
+      commitToggle('YARD');
+      logMsg('<b>Training struck from '+when+'.</b> The yard falls due again.');
+      return;
+    }
+    commitToggle('YARD');
+    proclaim(`The scholar takes the training yard${past?' — recorded for '+when:''}. ${GYM_XP} renown joins that day's line.`,'');
+    logMsg(`<b style="color:#6E9B4F">TRAINING KEPT.</b> +${GYM_XP} renown${past?' <b style="color:#D98E32">(recorded '+when+')</b>':' · walls +'+repairValue()}.`);
+    return;
   }
 });
 function floatDamage(anchor,text){
@@ -3203,9 +3197,8 @@ document.getElementById('mpTimeline').addEventListener('change',e=>{
     alert('The watch is set — the day is closed.\n\nNothing more may be honoured until dawn at '+fmtClock(dawnMins())+'. Rest is part of the campaign.');
     return;
   }
-  if(b.kind==='YARD'&&on&&!gymLoggedToday()){state.gymDays=(state.gymDays||[]).concat(todayISO());repair(repairValue());}
-  if(b.kind==='STUDY'&&on&&!paperLoggedToday()){state.paperDays=(state.paperDays||[]).concat(todayISO());repair(repairValue());}
-  if(b.kind==='FORGE'&&on&&!forgeLoggedToday()){state.forgeDays=(state.forgeDays||[]).concat(todayISO());repair(repairValue());}
+  if(b.kind==='YARD'&&on&&!gymLoggedOn(logDate)){commitToggle('YARD');}
+  if(b.kind==='FORGE'&&on&&!forgeLoggedOn(logDate)){commitToggle('FORGE');}
   if(b.id){
     if(on&&!state.done[b.id]){state.done[b.id]=stampForItem(b.id);rememberDone(b.id,state.done[b.id]);unsettle(isoOf(state.done[b.id]));repair(repairValue());}
     else if(!on&&state.done[b.id]){const ts=state.done[b.id];rememberDone(b.id,ts);state.untickedToday=state.untickedToday||{};state.untickedToday[b.id]=todayISO();delete state.done[b.id];unsettle(isoOf(ts));damageBase(repairValue());}
@@ -3560,6 +3553,27 @@ document.getElementById('resetBtn').addEventListener('click',async()=>{
   setTimeout(()=>document.getElementById('boot').classList.add('off'),700);
 })();
 
+
+/* a commitment is logged against the date being recorded, not always today.
+   the day is then unsettled so the siege recomputes with the work included. */
+function commitToggle(kind){
+  const iso=logDate, past=(iso!==todayISO());
+  const map={YARD:'gymDays',FORGE:'forgeDays',REST:'restDays'};
+  const key=map[kind];
+  const list=state[key]=state[key]||[];
+  const had=list.includes(iso);
+  if(had){
+    state[key]=list.filter(d=>d!==iso);
+    if(!past)damageBase(repairValue());
+  }else{
+    list.push(iso);
+    if(!past)repair(repairValue());
+  }
+  /* a past day must be re-judged from scratch, or it keeps the verdict it had */
+  if(past)unsettle(iso);
+  save();renderAll();
+  return !had;
+}
 
 /* ================= THE RAVEN — gist sync ================= */
 const GIST_NAME='realm-save.json', GIST_DESC='R.E.A.L.M. — campaign save';
