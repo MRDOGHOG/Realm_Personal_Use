@@ -1420,7 +1420,9 @@ function paperMissed(){return 0}   /* the Study is retired — it can no longer 
 function forgeLoggedToday(){return (state.forgeDays||[]).includes(todayISO())}
 function forgeLastGap(){
   const fd=state.forgeDays||[];
-  const raw=fd.length?daysSince(fd[fd.length-1]):daysSince(state.forgeStart||todayISO());
+  /* back-dated entries land at the end of the list, so take the latest DATE, not the last element */
+  const latest=fd.length?fd.slice().sort()[fd.length-1]:null;
+  const raw=latest?daysSince(latest):daysSince(state.forgeStart||todayISO());
   let skipped=0;const t=truceDays();
   for(let k=0;k<raw;k++){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-k);if(t[isoOf(d)])skipped++;}
   return Math.max(0,raw-skipped);
@@ -1433,7 +1435,9 @@ function away(){return !!state.away}
 function gymMissed(){return away()?0:Math.max(0,gymExpected()-(state.gymDays||[]).length)}
 function gymLastGap(){
   const gd=state.gymDays||[];
-  const raw=gd.length?daysSince(gd[gd.length-1]):daysSince(state.gymStart||todayISO());
+  /* back-dated entries land at the end of the list, so take the latest DATE, not the last element */
+  const latest=gd.length?gd.slice().sort()[gd.length-1]:null;
+  const raw=latest?daysSince(latest):daysSince(state.gymStart||todayISO());
   /* truce days inside the gap are not counted */
   let skipped=0;const t=truceDays();
   for(let k=0;k<raw;k++){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-k);if(t[isoOf(d)])skipped++;}
