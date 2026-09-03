@@ -2862,6 +2862,7 @@ function renderFall(){
 function renderAll(){
   accrue();
   renderCourses();renderProjects();renderHUD();renderBoss();renderBase();renderDeadlines();renderShop();renderMuster();renderGym();renderForge();renderPaper();renderMarch();renderFall();
+  if(typeof refreshBackdateUI==='function')refreshBackdateUI();
 }
 
 /* ================= INTERACTION ================= */
@@ -2876,6 +2877,30 @@ function refreshBackdateUI(){
     .toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'}).toUpperCase()
     +(isTruce(logDate)?' — ⚑ TRUCE DAY':'');
   document.getElementById('logDate').value=logDate;
+  /* the Citadel and the enemy show that day's siege, not today's, while back-dating */
+  document.querySelectorAll('#basePanel,#bossPanel').forEach(el=>{
+    if(!el)return;
+    el.style.outline=on?'1px solid var(--amber)':'';
+    el.style.boxShadow=on?'0 0 0 3px rgba(217,142,50,.13)':'';
+  });
+  const bp=document.getElementById('bossPanel');
+  let tagEl=document.getElementById('backdateTag');
+  if(on){
+    if(!tagEl&&bp){
+      tagEl=document.createElement('div');
+      tagEl.id='backdateTag';
+      tagEl.style.cssText='font-family:var(--font-d);font-size:9px;letter-spacing:2px;color:var(--amber);'+
+        'border:1px solid var(--amber);padding:5px 8px;margin-bottom:9px;font-weight:700;text-align:center';
+      bp.insertBefore(tagEl,bp.firstChild.nextSibling);
+    }
+    if(tagEl){
+      const rec=(state.settled||{})[logDate];
+      const dh=(rec&&rec.h)?rec.h:hostFor();
+      const dx=taskXpOn(logDate);
+      tagEl.innerHTML='⏳ THE FIELD OF '+new Date(logDate+'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}).toUpperCase()+
+        ' — HOST '+dh+' · TAKEN '+dx+(dx>=dh?' · <span style="color:var(--verdant)">BROKEN</span>':' · '+Math.max(0,dh-dx)+' STILL STANDING');
+    }
+  } else if(tagEl){ tagEl.remove(); }
   const tb=document.getElementById('truceBtn');
   const t=isTruce(logDate);
   tb.textContent=t?'⚑ TRUCE STANDS':'⚑ DECLARE A TRUCE (skip a day)';
