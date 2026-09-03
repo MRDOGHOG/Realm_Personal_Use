@@ -2771,6 +2771,7 @@ function startNews(){
   clearInterval(newsTimer);
   newsTimer=setInterval(tickNews,9000);
 }
+const openDays=new Set();
 function renderMuster(){
   const host=hostFor();
   const rows=[];
@@ -2793,13 +2794,29 @@ function renderMuster(){
     else {mark='✖';col='var(--crimson)';note='idle — walls struck';}
     const tally={};names.forEach(c=>tally[c]=(tally[c]||0)+1);
     const list=Object.entries(tally).map(([c,v])=>c+'×'+v).join(' ');
+    /* what exactly landed on this day, by name */
+    const detail=[];
+    for(const id in state.done){
+      if(isoOf(state.done[id])!==iso)continue;
+      const it=ITEMS.find(i=>i.id===id); if(!it)continue;
+      detail.push(`<div style="display:flex;gap:7px;padding:2px 0 2px 22px;font-size:13px">
+        <span style="color:var(--gold-dim);font-family:var(--font-d);font-size:8.5px;width:44px;flex:none">${it.course.code}</span>
+        <span style="flex:1;min-width:0;color:var(--text-dim)">${it.name.slice(0,64)}</span>
+        <span style="color:var(--gold-dim);font-size:11px">+${it.xp}</span>
+        <button class="btn strike-one" data-strike="${id}" style="padding:1px 5px;font-size:8px;flex:none">STRIKE</button>
+      </div>`);
+    }
+    if((state.forgeDays||[]).includes(iso))detail.push('<div style="padding:2px 0 2px 22px;font-size:13px;color:var(--verdant)">⚒ the forge</div>');
+    if(gym)detail.push('<div style="padding:2px 0 2px 22px;font-size:13px;color:var(--verdant)">⚔ the training yard</div>');
+    if((state.restDays||[]).includes(iso))detail.push('<div style="padding:2px 0 2px 22px;font-size:13px;color:var(--verdant)">🌙 the watch was set</div>');
     rows.push(`<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1px dashed rgba(201,162,39,.10)">
-      <span style="color:${col};width:14px">${mark}</span>
+      <span style="color:${col};width:14px;cursor:pointer" class="muster-toggle" data-day="${iso}">${detail.length?(openDays.has(iso)?'▾':'▸'):mark}</span>
       <span style="font-family:var(--font-d);font-size:9px;color:var(--gold-dim);width:52px">${k===0?'TODAY':d.toLocaleDateString(undefined,{weekday:'short',day:'numeric'}).toUpperCase()}</span>
       <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${x||tr?'var(--text)':'var(--text-dim)'}">${list||'—'}${gym?' <span style="color:var(--verdant)">⚔yard</span>':''}</span>
       <span style="font-family:var(--font-d);font-size:9px;color:${col}">${x?'+'+x:''}</span>
       <span style="font-size:11.5px;color:var(--text-dim);font-style:italic;width:96px;text-align:right">${note}</span>
-    </div>`);
+    </div>
+    ${detail.length?`<div class="muster-detail" data-day="${iso}" style="display:${openDays.has(iso)?'block':'none'};padding-bottom:5px">${detail.join('')}</div>`:''}`);
   }
   const p=moraleParts();
   document.getElementById('muster').innerHTML=rows.join('')+
@@ -2922,6 +2939,21 @@ function refreshBackdateUI(){
   tb.style.opacity=t?.45:1;
 }
 document.addEventListener('click',e=>{
+  const mt=e.target.closest('.muster-toggle');
+  if(mt){const d=mt.dataset.day;openDays.has(d)?openDays.delete(d):openDays.add(d);renderMuster();return;}
+  const st=e.target.closest('[data-strike]');
+  if(st){
+    const id=st.dataset.strike, it=ITEMS.find(i=>i.id===id);
+    if(!it)return;
+    if(!confirm('Strike "'+it.name.slice(0,60)+'" from the record?\n\nIt becomes unhonoured again and its renown is taken back.'))return;
+    const ts=state.done[id], was=isoOf(ts);
+    delete state.done[id];
+    if(state.firstDone)delete state.firstDone[id];
+    unsettle(was);
+    save();renderAll();
+    logMsg('<b>Struck:</b> '+it.course.code+' · '+it.name.slice(0,52)+' (was recorded '+was+').');
+    return;
+  }
   const head=e.target.closest('.course-head');
   if(head&&!e.target.closest('a')){
     const id=head.dataset.cid;
