@@ -1618,7 +1618,14 @@ function accrue(){
   const rate=dayRate();
   const host=hostFor();
   /* settle every finished day since last visit */
-  let cursor=new Date(state.lastTick+'T00:00:00');
+  /* start from the earliest finished day that has no verdict, so corrections are re-judged */
+  let earliest=state.lastTick;
+  for(let k=1;k<=45;k++){
+    const d=new Date(todayD);d.setDate(todayD.getDate()-k);const iso=isoOf(d);
+    if(iso<(state.start||iso))break;
+    if(!(state.settled||{})[iso]&&!isTruce(iso))earliest=iso;
+  }
+  let cursor=new Date(earliest+'T00:00:00');
   let breachHP=0,breachDays=0,overflowXP=0,heldDays=0;
   while(cursor<todayD){
     const iso=isoOf(cursor);
@@ -1804,11 +1811,16 @@ function repairValue(){return Math.max(1,Math.round(REPAIR*moraleMult()))}
 /* an honoured decree keeps the day it was actually honoured on.
    unchecking and rechecking restores the original date rather than granting today's renown. */
 function stampForItem(id){
+  /* an explicit back-date is a deliberate correction and always wins.
+     the honoured-on memory only guards against silent re-dating while logging as today. */
+  if(logDate!==todayISO())return stampFor(logDate);
   const prior=(state.firstDone||{})[id];
   return prior?prior:stampFor(logDate);
 }
 function rememberDone(id,ts){
   state.firstDone=state.firstDone||{};
+  /* a deliberate back-date corrects the record rather than being blocked by it */
+  if(logDate!==todayISO()){state.firstDone[id]=ts;return;}
   if(!state.firstDone[id])state.firstDone[id]=ts;
 }
 function repair(n){state.dmg=Math.max(0,(state.dmg||0)-n)}
