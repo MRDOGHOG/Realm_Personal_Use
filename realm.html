@@ -3641,6 +3641,11 @@ async function findGist(){
 }
 async function syncPush(loud){
   if(!ghToken()||syncBusy)return;
+  /* a blank device must not quietly wipe the gist on its first load */
+  if(!loud && Object.keys(state.done||{}).length===0){
+    logMsg('<span style="color:#D98E32">Raven grounded — this device has no honoured decrees yet. Fetch first, or use ▲ SEND NOW to overwrite deliberately.</span>');
+    return;
+  }
   syncBusy=true;
   try{
     const body=JSON.stringify({files:{[GIST_NAME]:{content:JSON.stringify(savePayload(),null,1)}}});
@@ -3672,8 +3677,18 @@ async function syncPull(loud){
     const o=(raw&&raw.state&&raw.state.start)?raw.state:raw;
     if(!o||!o.start||typeof o.done!=='object')throw new Error('the gist holds no valid save');
     const theirs=new Date(raw.written||0).getTime()||0, mine=state.lastOpen||0;
-    if(!loud && theirs<=mine)return false;
-    if(loud && theirs<mine && !confirm('The gist copy is OLDER than what is on this device.\n\nFetch it anyway and overwrite what is here?'))return false;
+    const theirDone=Object.keys(o.done||{}).length, myDone=Object.keys(state.done||{}).length;
+    /* a save with less in it never replaces one with more without being asked —
+       a fresh device pushing an empty realm must not erase a full one. */
+    if(theirDone<myDone){
+      const msg='The copy in the gist holds FEWER honoured decrees than this device.\n\n'+
+        'gist: '+theirDone+' decrees\nhere: '+myDone+' decrees\n\n'+
+        'This usually means a fresh device sent an empty realm. Overwrite what is here anyway?';
+      if(!loud){logMsg('<span style="color:#D98E32">Raven held back — the gist copy has '+theirDone+' decrees, this device has '+myDone+'. Use ▼ FETCH NOW if you truly want it.</span>');return false;}
+      if(!confirm(msg))return false;
+    }
+    else if(!loud && theirs<=mine)return false;
+    else if(loud && theirs<mine && !confirm('The gist copy is OLDER than what is on this device.\n\nFetch it anyway and overwrite what is here?'))return false;
     state=o;
     if(!state.gymDays)state.gymDays=[];if(!state.gymStart)state.gymStart=todayISO();
     if(!state.forgeDays)state.forgeDays=[];if(!state.forgeStart)state.forgeStart=todayISO();
