@@ -3621,6 +3621,7 @@ function commitToggle(kind){
 }
 
 /* ================= THE RAVEN — gist sync ================= */
+const BUILD='2026-09-04.1508';
 const GIST_NAME='realm-save.json', GIST_DESC='R.E.A.L.M. — campaign save';
 let syncBusy=false;
 function ghToken(){try{return localStorage.getItem('realm-gh-token')||''}catch(e){return ''}}
@@ -3633,20 +3634,60 @@ async function gh(path,opts){
   if(!r.ok)throw new Error('GitHub said '+r.status+(r.status===401?' — the token was refused':r.status===403?' — rate limited or scope missing':''));
   return r.json();
 }
+/* always look at every gist, never trust a cached id blindly, and when more than one
+   save gist exists take the most recently updated so both devices agree on the same one. */
+async function allSaveGists(){
+  let out=[],page=1;
+  while(page<=4){
+    const list=await gh('/gists?per_page=100&page='+page);
+    out=out.concat(list.filter(g=>g.files&&g.files[GIST_NAME]));
+    if(list.length<100)break;
+    page++;
+  }
+  out.sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at));
+  return out;
+}
 async function findGist(){
-  if(ghGist())return ghGist();
-  const list=await gh('/gists');
-  const hit=list.find(g=>g.files&&g.files[GIST_NAME]);
-  if(hit){setSyncMeta('realm-gh-gist',hit.id);return hit.id}
-  return '';
+  const hits=await allSaveGists();
+  if(!hits.length){setSyncMeta('realm-gh-gist','');return ''}
+  const cached=ghGist();
+  const chosen=(cached&&hits.some(g=>g.id===cached)&&hits[0].id===cached)?cached:hits[0].id;
+  if(hits.length>1){
+    logMsg('<b style="color:#D98E32">'+hits.length+' save gists exist</b> — using the most recent ('+chosen.slice(0,8)+'…). '+
+      'Delete the others at gist.github.com so the raven cannot split the campaign again.');
+  }
+  setSyncMeta('realm-gh-gist',chosen);
+  return chosen;
 }
 async function syncPush(loud){
   if(!ghToken()||syncBusy)return;
+  const myDone=Object.keys(state.done||{}).length;
   /* a blank device must not quietly wipe the gist on its first load */
-  if(!loud && Object.keys(state.done||{}).length===0){
+  if(!loud && myDone===0){
     logMsg('<span style="color:#D98E32">Raven grounded — this device has no honoured decrees yet. Fetch first, or use ▲ SEND NOW to overwrite deliberately.</span>');
     return;
   }
+  /* nor may a thinner save quietly overwrite a fuller one already in the gist */
+  try{
+    const id0=await findGist();
+    if(id0){
+      const g0=await gh('/gists/'+id0);
+      let t0=g0.files[GIST_NAME].content;
+      if(g0.files[GIST_NAME].truncated)t0=await (await fetch(g0.files[GIST_NAME].raw_url)).text();
+      const r0=JSON.parse(t0); const o0=(r0&&r0.state&&r0.state.start)?r0.state:r0;
+      const theirDone=Object.keys((o0||{}).done||{}).length;
+      if(theirDone>myDone){
+        const msg='The gist holds '+theirDone+' honoured decrees; this device has only '+myDone+'.\n\n'+
+          'Sending would erase '+(theirDone-myDone)+' decrees of work done elsewhere.\n\nSend anyway?';
+        if(!loud){
+          logMsg('<b style="color:#D98E32">RAVEN HELD BACK.</b> The gist has '+theirDone+' decrees, this device only '+myDone+
+            '. Nothing was sent — use <b>▼ FETCH NOW</b> to take the fuller copy, or <b>▲ SEND NOW</b> to overwrite it deliberately.');
+          syncBusy=false; renderSync(); return;
+        }
+        if(!confirm(msg)){syncBusy=false;renderSync();return;}
+      }
+    }
+  }catch(e){ /* if the check itself fails, fall through and let the push attempt report */ }
   syncBusy=true;
   try{
     const body=JSON.stringify({files:{[GIST_NAME]:{content:JSON.stringify(savePayload(),null,1)}}});
@@ -3710,11 +3751,12 @@ async function syncPull(loud){
 function renderSync(){
   const el=document.getElementById('syncStatus'); if(!el)return;
   const t=ghToken(), when=(()=>{try{return localStorage.getItem('realm-gh-when')}catch(e){return null}})();
-  el.innerHTML = !t
+  const stamp='<div style="font-family:var(--font-d);font-size:8.5px;letter-spacing:1.5px;color:var(--gold-dim);margin-top:8px">BUILD '+BUILD+' — this must match on every device</div>';
+  el.innerHTML = (!t
     ? '<b style="color:var(--amber)">NO RAVEN IS KEPT.</b> This device stands alone — its save lives only in this browser. Paste a token below to carry the campaign between machines.'
     : '<b style="color:var(--verdant)">THE RAVEN FLIES.</b> Every change is sent to your private gist'+
       (when?', last at <b>'+new Date(when).toLocaleString()+'</b>':'')+
-      (ghGist()?'<br><span style="color:var(--text-dim);font-size:12.5px">gist '+ghGist().slice(0,10)+'…</span>':'');
+      (ghGist()?'<br><span style="color:var(--text-dim);font-size:12.5px">gist '+ghGist().slice(0,10)+'…</span>':''))+stamp;
   const tf=document.getElementById('ghToken'); if(tf&&t&&!tf.value)tf.placeholder='token set — paste a new one to replace it';
 }
 
