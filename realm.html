@@ -512,6 +512,7 @@ a.dest,.course,.week{border-radius:0}
         <button class="btn" id="syncOff">RELEASE THE RAVEN</button>
       </div>
       <div style="font-size:12.5px;color:var(--text-dim);font-style:italic;margin-top:9px;line-height:1.5">
+        <b>On a new device:</b> set the token, then ▼ FETCH NOW. Setting the token never sends anything.<br>
         Make a token at github.com/settings/tokens (classic) with only the <b>gist</b> scope ticked.
         The realm keeps your save in one private gist and carries it between every device that holds this token.
       </div>
@@ -3841,8 +3842,19 @@ document.getElementById('syncSave').addEventListener('click',async ()=>{
   if(!v){alert('Paste a GitHub token with the gist scope.');return}
   setSyncMeta('realm-gh-token',v); document.getElementById('ghToken').value='';
   renderSync();
-  logMsg('<b>A raven is taken into service.</b> Sending the first save…');
-  await syncPush(true);
+  /* setting a token never sends. a new device asks the gist what is there first. */
+  logMsg('<b>A raven is taken into service.</b> Asking the gist what it already holds…');
+  const id=await findGist().catch(()=>'');
+  if(!id){
+    logMsg('No save exists in the gist yet. Use <b>▲ SEND NOW</b> to make this device the first.');
+    alert('Token set.\n\nNo save exists in your gist yet — press ▲ SEND NOW to put this device\'s campaign there.');
+  }else{
+    const mine=Object.keys(state.done||{}).length;
+    logMsg('A save was found in the gist. Use <b>▼ FETCH NOW</b> to bring it down'+(mine?', or <b>▲ SEND NOW</b> to overwrite it with this device.':'.'));
+    alert('Token set, and a save was found in your gist.\n\nPress ▼ FETCH NOW to bring it to this device.'+
+      (mine?'\n\n(This device already has '+mine+' honoured decrees — fetching will replace them.)':''));
+  }
+  renderSync();
 });
 document.getElementById('syncPush').addEventListener('click',()=>{
   if(!ghToken()){alert('Set a token first.');return}
