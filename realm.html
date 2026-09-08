@@ -501,7 +501,10 @@ a.dest,.course,.week{border-radius:0}
       <div id="muster" style="font-size:13.5px;line-height:1.55"></div>
     </div>
     <div class="panel" style="margin-bottom:16px"><h2>The Chronicle</h2><div class="log" id="log"></div></div>
-        <div class="panel" style="margin-bottom:16px" id="syncPanel"><h2>The Raven — sync across devices</h2>
+        <div class="panel" style="margin-bottom:16px" id="supplyPanel"><h2>The Supply Train</h2>
+      <div id="supplyBody" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel" style="margin-bottom:16px" id="syncPanel"><h2>The Raven — sync across devices</h2>
       <div id="syncStatus" style="font-size:14px;line-height:1.55;margin-bottom:10px"></div>
       <input id="ghToken" type="password" placeholder="GitHub token (gist scope only)" autocomplete="off"
         style="width:100%;background:var(--panel-solid);border:1px solid var(--line-strong);color:var(--gold-bright);font-family:var(--font-b);padding:9px 10px;font-size:14px;margin-bottom:8px">
@@ -558,6 +561,7 @@ a.dest,.course,.week{border-radius:0}
    dusk assaults the Citadel walls.
    ============================================================ */
 const TLABEL={LEC:'LORE',REC:'DRILL',PSET:'TRIAL',EXAM:'PROVING',PRAC:'REHEARSAL',RVW:'RECKONING',CH:'TOME',MILE:'QUEST',BOOK:'FOLIO'};
+const XP = {LEC:10, REC:45, PSET:50, EXAM:100, PRAC:60, RVW:25};
 
 const COURSES = [
 {
@@ -795,93 +799,27 @@ const COURSES = [
  ]
 },
 {
- id:'dm', bg:true, code:'6.042J', name:'Mathematics for Computer Science', meta:'LEIGHTON & VAN DIJK · F10 · BACKGROUND — OWN PACE, CARRIES INTO THE SCHOOL YEAR',
- url:'https://ocw.mit.edu/courses/6-042j-mathematics-for-computer-science-fall-2010/',
- syl:'https://ocw.mit.edu/courses/6-042j-mathematics-for-computer-science-fall-2010/pages/syllabus/',
- videos:'https://ocw.mit.edu/courses/6-042j-mathematics-for-computer-science-fall-2010/video_galleries/video-lectures/',
+ id:'nc', next:true, code:'9.40', name:'Introduction to Neural Computation',
+ meta:'THE NEXT CAMPAIGN · NOT YET ON THE CLOCK · WANTS 18.03 AND 18.06 FIRST',
+ url:'https://ocw.mit.edu/courses/9-40-introduction-to-neural-computation-spring-2018/',
+ syl:'https://ocw.mit.edu/courses/9-40-introduction-to-neural-computation-spring-2018/pages/syllabus/',
  weeks:[
-  {t:'Proofs & induction', seq:[
-   ['LEC',"Lecture 1: Introduction and Proofs"],
-   ['REC',"Recitation 1: Logic, proving an implication"],
-   ['LEC',"Lecture 2: Induction"],
-   ['REC',"Recitation 2: Induction"],
-   ['PSET',"Problem Set 1 — due end of week"]]},
-  {t:'Strong induction & number theory', seq:[
-   ['LEC',"Lecture 3: Strong Induction"],
-   ['REC',"Recitation 3: State machines"],
-   ['LEC',"Lecture 4: Number Theory I"],
-   ['REC',"Recitation 4: Greatest common divisor"],
-   ['PSET',"Problem Set 2 — due end of week"]]},
-  {t:'Number theory II & graph coloring', seq:[
-   ['LEC',"Lecture 5: Number Theory II"],
-   ['REC',"Recitation 5: Exponentiation, modular arithmetic, RSA"],
-   ['LEC',"Lecture 6: Graph Theory and Coloring"],
-   ['REC',"Recitation 6: Graph basics"],
-   ['PSET',"Problem Set 3 — due end of week"]]},
-  {t:'Matching & spanning trees', seq:[
-   ['LEC',"Lecture 7: Matching Problems"],
-   ['REC',"Recitation 7: Stable marriage problem"],
-   ['LEC',"Lecture 8: Graph Theory II — Minimum Spanning Trees"],
-   ['REC',"Recitation 8: Build-up error, the grow algorithm"],
-   ['PSET',"Problem Set 4 — due end of week"]]},
-  {t:'Networks & graph theory III', seq:[
-   ['LEC',"Lecture 9: Communication Networks"],
-   ['REC',"Recitation 9: Traveling salesperson problem"],
-   ['LEC',"Lecture 10: Graph Theory III"],
-   ['REC',"Recitation 10: Routing in a Beneš network"],
-   ['PSET',"Problem Set 5 — due end of week"]]},
-  {t:'Relations, scheduling & sums', seq:[
-   ['LEC',"Lecture 11: Relations, Partial Orders, and Scheduling"],
-   ['REC',"Recitation 11: Equivalence relations, chains, topological sort"],
-   ['LEC',"Lecture 12: Sums"],
-   ['REC',"Recitation 12: The L-tower problem, double sums"],
-   ['PSET',"Problem Set 6 — due end of week"]]},
-  {t:'ASYMPTOTICS & recurrences', seq:[
-   ['LEC',"Lecture 13: Sums and Asymptotics"],
-   ['REC',"Recitation 13: Asymptotic notation, asymptotic equivalence"],
-   ['LEC',"Lecture 14: Divide and Conquer Recurrences"],
-   ['REC',"Recitation 14: Guessing a particular solution, linear recurrences"],
-   ['PSET',"Problem Set 7 — due end of week"]]},
-  {t:'Linear recurrences & counting', seq:[
-   ['LEC',"Lecture 15: Linear Recurrences"],
-   ['REC',"Recitation 15: Counting problems, pigeonhole principle"],
-   ['LEC',"Lecture 16: Counting Rules I"],
-   ['PSET',"Problem Set 8 — due end of week"]]},
-  {t:'Midterm → counting II & probability', seq:[
-   ['EXAM',"Evening Midterm (2 hours)"],
-   ['LEC',"Lecture 17: Counting Rules II"],
-   ['REC',"Recitation 16: Combinatorial proof, more counting"],
-   ['LEC',"Lecture 18: Probability Introduction"],
-   ['REC',"Recitation 17: Probability, Monty Hall problem"],
-   ['PSET',"Problem Set 9 — due end of week"]]},
-  {t:'Conditional probability & independence', seq:[
-   ['LEC',"Lecture 19: Conditional Probability"],
-   ['REC',"Recitation 18: Total probability law"],
-   ['LEC',"Lecture 20: Independence"],
-   ['REC',"Recitation 19: Bayes' rule"],
-   ['PSET',"Problem Set 10 — due end of week"]]},
-  {t:'Random variables & expectation', seq:[
-   ['LEC',"Lecture 21: Random Variables"],
-   ['REC',"Recitation 20: Philosophy of probability"],
-   ['LEC',"Lecture 22: Expectation I"],
-   ['REC',"Recitation 21: Conditional expectation and total expectation"],
-   ['PSET',"Problem Set 11 — due end of week"]]},
-  {t:'Expectation II & large deviations', seq:[
-   ['LEC',"Lecture 23: Expectation II"],
-   ['REC',"Recitation 22: Expected value rule, properties of variance"],
-   ['LEC',"Lecture 24: Large Deviations"],
-   ['REC',"Recitation 23: Probability theorems"],
-   ['PSET',"Problem Set 12 — due end of week"]]},
-  {t:'Random walks & the Final', seq:[
-   ['LEC',"Lecture 25: Random Walks"],
-   ['EXAM',"Final Exam"]]}
+  {t:'Neurons as circuits — membrane, resistance, capacitance', seq:[["LEC","Equivalent circuit of the membrane"],["LEC","The RC neuron and the membrane time constant"]]},
+  {t:'The action potential — Hodgkin & Huxley', seq:[["LEC","Voltage-gated channels"],["LEC","The Hodgkin-Huxley model"]]},
+  {t:'Integrate and fire', seq:[["LEC","Leaky integrate-and-fire neurons"],["LEC","Firing rates and the f-I curve"]]},
+  {t:'Spike trains and the Poisson process', seq:[["LEC","Spike statistics"],["LEC","Poisson processes and variability"]]},
+  {t:'Convolution and linear filters', seq:[["LEC","Convolution"],["LEC","Linear filtering of spike trains"]]},
+  {t:'Receptive fields and the STA', seq:[["LEC","Spike-triggered averaging"],["LEC","Receptive fields in vision"]]},
+  {t:'Spectral analysis', seq:[["LEC","Fourier methods for neural signals"],["LEC","Power spectra and coherence"]]},
+  {t:'Local field potentials and EEG', seq:[["LEC","Where the LFP comes from"],["LEC","What the scalp can and cannot see"]]},
+  {t:'Principal components', seq:[["LEC","PCA on neural data"],["LEC","Spike sorting"]]},
+  {t:'Decoding and inference', seq:[["LEC","Signal detection theory"],["LEC","Bayesian decoding of population activity"]]},
+  {t:'Networks — recurrence and attractors', seq:[["LEC","Recurrent networks"],["LEC","Hopfield networks and memory"]]},
+  {t:'Plasticity and learning', seq:[["LEC","Hebbian learning and STDP"],["LEC","What the brain does that gradient descent does not"]]}
  ]
 }
 ];
 
-const XP = {LEC:10, REC:45, PSET:50, EXAM:100, PRAC:60, RVW:25};
-
-/* ============ THE ROYAL WORKSHOP (quests) ============ */
 const PROJECTS = [
 {
  id:'mr', code:'MR', name:'Modern Robotics — Lynch & Park', meta:'GRIMOIRE · READ + PROBLEMS · 2 TOMES = ⚜1',
@@ -945,24 +883,25 @@ const PROJECTS = [
   {n:"How to Rule the World — second quarter", xp:50, tok:0, book:true},
   {n:"How to Rule the World — third quarter", xp:50, tok:0, book:true},
   {n:"How to Rule the World — VOLUME COMPLETE", xp:70, tok:1, book:true},
-  {n:"The Power Law — Sebastian Mallaby — first quarter", xp:50, tok:0, book:true},
-  {n:"The Power Law — second quarter", xp:50, tok:0, book:true},
-  {n:"The Power Law — third quarter", xp:50, tok:0, book:true},
-  {n:"The Power Law — VOLUME COMPLETE", xp:70, tok:1, book:true},
-  {n:"The Thinking Machine — Stephen Witt — first quarter", xp:50, tok:0, book:true},
+  {n:"The Thinking Machine — Stephen Witt — Huang and Nvidia — first quarter", xp:50, tok:0, book:true},
   {n:"The Thinking Machine — second quarter", xp:50, tok:0, book:true},
   {n:"The Thinking Machine — third quarter", xp:50, tok:0, book:true},
   {n:"The Thinking Machine — VOLUME COMPLETE", xp:70, tok:1, book:true},
+  {n:"Neuroscience: Exploring the Brain — Bear, Connors & Paradiso — first quarter", xp:50, tok:0, book:true},
+  {n:"Neuroscience: Exploring the Brain — second quarter", xp:50, tok:0, book:true},
+  {n:"Neuroscience: Exploring the Brain — third quarter", xp:50, tok:0, book:true},
+  {n:"Neuroscience: Exploring the Brain — VOLUME COMPLETE", xp:70, tok:1, book:true},
   {n:"Rhythms of the Brain — György Buzsáki — first quarter", xp:50, tok:0, book:true},
   {n:"Rhythms of the Brain — second quarter", xp:50, tok:0, book:true},
   {n:"Rhythms of the Brain — third quarter", xp:50, tok:0, book:true},
   {n:"Rhythms of the Brain — VOLUME COMPLETE", xp:70, tok:1, book:true},
-  {n:"Brain-Computer Interfaces: Principles and Practice — Wolpaw & Wolpaw — first quarter", xp:50, tok:0, book:true},
+  {n:"Brain-Computer Interfaces — Wolpaw — first quarter", xp:50, tok:0, book:true},
   {n:"Brain-Computer Interfaces — second quarter", xp:50, tok:0, book:true},
   {n:"Brain-Computer Interfaces — third quarter", xp:50, tok:0, book:true},
   {n:"Brain-Computer Interfaces — VOLUME COMPLETE", xp:70, tok:1, book:true}
  ]
-}
+},
+
 ];
 
 /* ============ WARLORD ART — heraldic line-work ============ */
@@ -1138,7 +1077,7 @@ function buildItems(){
             name:'THE RECKONING — mark it, and see whether the rehearsal actually fixed anything',
             xp:c.rvwXP||XP.RVW, dayOff:si, noDue:!!c.bg});
         } else {
-          items.push({id:`${c.id}-w${w}-s${si}`, course:c, week:w, type:ty, name:nm, xp, dayOff:si, noDue:!!c.bg});
+          items.push({id:`${c.id}-w${w}-s${si}`, course:c, week:w, type:ty, name:nm, xp, dayOff:si, noDue:(!!c.bg||!!c.next)});
         }
         });
         return;
@@ -1187,6 +1126,7 @@ const BOSS_RANGES = BOSSES.map(b=>{
   const r={b, from:acc, hp}; acc+=hp; return r;
 });
 BOSS_RANGES[BOSS_RANGES.length-1].hp += BOSS_POOL-acc;
+const TOTAL_BOSS_HP=BOSS_RANGES.reduce((a,r)=>a+r.hp,0);
 
 /* ================= STORAGE ================= */
 const store={
@@ -1248,7 +1188,7 @@ function truceShift(d){
   }
   return n;
 }
-const ONCLOCK=COURSES.filter(c=>!c.bg);
+const ONCLOCK=COURSES.filter(c=>!c.bg&&!c.next);
 ONCLOCK.forEach((c,i)=>{c.phase=i;});
 COURSES.filter(c=>c.bg).forEach(c=>{c.phase=0;});
 const PHASES=Math.max(1,ONCLOCK.length);
@@ -1555,7 +1495,7 @@ function earnedTokens(){return weekTokens()+projectTokens()+courseTokens()}
 function tokenBalance(){
   /* if the roster changes and fewer seals are earnable than were already spent,
      the balance floors at zero — works already commissioned are never taken back. */
-  return Math.max(0, earnedTokens()-(state.spent||0));
+  return Math.max(0, earnedTokens()+(state.bonusSeals||0)-(state.spent||0));
 }
 /* ===== THE ROYAL WORKS — seals spent on the realm itself, permanent ===== */
 const COSMETICS=[
@@ -1631,6 +1571,9 @@ function accrue(){
       state.bossDmg=Math.min(BOSS_POOL,state.bossDmg+over);
       overflowXP+=over;
       state.settled[iso]={d:charged,o:over,h:host};   /* the host as it stood that day */
+      /* only once every banner has fallen does the overflow go to the wagons —
+         until then every point of it lands on the warlords, where it belongs */
+      if(over>0 && (state.bossDmg||0)>=TOTAL_BOSS_HP){state.supplies=(state.supplies||0)+over;}
     }
     cursor.setDate(cursor.getDate()+1);
   }
@@ -2341,9 +2284,10 @@ function renderCourses(){
       root.appendChild(el);
     }
   };
-  const active=COURSES.filter(c=>!c.bg), bg=COURSES.filter(c=>c.bg);
+  const active=COURSES.filter(c=>!c.bg&&!c.next), bg=COURSES.filter(c=>c.bg), nx=COURSES.filter(c=>c.next);
   draw(active,'⚜ THE DISCIPLINES ON THE CLOCK ('+active.length+')');
-  draw(bg,'⚜ SET ASIDE — NO DEADLINES','Off the clock and out of the daily reckoning. Still yours to finish, at whatever pace the school year allows.');
+  draw(bg,'⚜ SET ASIDE — NO DEADLINES','Off the clock and out of the daily reckoning.');
+  draw(nx,'⚔ THE NEXT CAMPAIGN','Waiting beyond this campaign. Nothing here is owed, nothing here is counted — it is the ground you take once the maths is yours. Mathematics for Computer Science was struck from the rolls; it can be raised again whenever you want it.');
 }
 function renderProjects(){
   const root=document.getElementById('courses');
@@ -2885,6 +2829,7 @@ function renderAll(){
   accrue();
   renderCourses();renderProjects();renderHUD();renderBoss();renderBase();renderDeadlines();renderShop();renderMuster();renderGym();renderForge();renderPaper();renderMarch();renderFall();
   if(typeof refreshBackdateUI==='function')refreshBackdateUI();
+  if(typeof renderSupply==='function')renderSupply();
 }
 
 /* ================= INTERACTION ================= */
@@ -3522,6 +3467,8 @@ document.getElementById('refoundBtn').addEventListener('click',()=>{
     odCharged:0, cores:cr, burned:bu, lastBurnDay:null, rekindleBase:rk,
     rank:levelInfo(earnedXP()).lvl, pardoned:{}, truce:{}, sig:CONTENT_SIG, lastOpen:Date.now(),
     firstDone:fdone,
+    supplies:0,
+    bonusSeals:(state.bonusSeals||0)+Math.floor((state.supplies||0)/SUPPLY_PER_SEAL),
     courseStart:{},                                      /* own-pace courses re-anchor to today too */
     dawn:times.dawn, bed:times.bed, yard:times.yard, dinner:times.dinner
   };
@@ -3736,6 +3683,21 @@ async function syncPull(loud){
     else logMsg('<span style="color:#C03038">Fetch failed — '+e.message+'</span>');
     return false;
   }
+}
+const SUPPLY_PER_SEAL=400;
+function renderSupply(){
+  const el=document.getElementById('supplyBody'); if(!el)return;
+  const sup=state.supplies||0, seals=Math.floor(sup/SUPPLY_PER_SEAL), toNext=SUPPLY_PER_SEAL-(sup%SUPPLY_PER_SEAL);
+  el.innerHTML=`
+    <div style="font-family:var(--font-d);font-size:27px;color:var(--gold-bright);font-weight:900;letter-spacing:1px">${sup}</div>
+    <div style="font-family:var(--font-d);font-size:9px;letter-spacing:2px;color:var(--gold-dim);margin-bottom:9px">PROVISIONS LAID BY</div>
+    <div style="color:var(--text-dim);font-style:italic">${(state.bossDmg||0)>=TOTAL_BOSS_HP
+      ?'Every banner has fallen. There is nothing left to strike, so the overflow is loaded into the wagons.'
+      :'<b style="color:var(--amber)">The wagons stay empty while banners still stand.</b> Every point you win goes to the warlords first — all '+TOTAL_BOSS_HP+' of them. Only once the last has fallen does the surplus come here.'}
+    ${seals>0?`<b style="color:var(--verdant)">The train already carries ⚜${seals} into the next campaign.</b>`:''}
+    ${toNext} more and the wagons hold another seal.</div>
+    <div style="margin-top:8px;height:5px;background:rgba(0,0,0,.5);border:1px solid var(--line)">
+      <i style="display:block;height:100%;width:${Math.round((sup%SUPPLY_PER_SEAL)/SUPPLY_PER_SEAL*100)}%;background:var(--gold)"></i></div>`;
 }
 function renderSync(){
   const el=document.getElementById('syncStatus'); if(!el)return;
