@@ -539,6 +539,7 @@ a.dest,.course,.week{border-radius:0}
         <input type="file" id="upFile" accept=".json,application/json" style="display:none">
         <button class="btn" id="importBtn">RESTORE SAVE</button>
         <button class="btn" id="pardonBtn">ROYAL PARDON</button>
+        <button class="btn" id="clearTrucesBtn">⚑ LIFT THE FALSE TRUCES</button>
         <button class="btn" id="mercyBtn" style="border-color:var(--gold);color:var(--gold-bright)">✚ THE KING'S MERCY — HEAL EVERYTHING</button>
         <button class="btn" id="resumeBtn">⟳ RESUME WHERE YOU LEFT OFF</button>
         <button class="btn" id="refoundBtn">⚜ REDRAW THE CALENDAR</button>
@@ -1283,7 +1284,8 @@ async function load(){
       state.cores=Math.min(MAX_CORES,(typeof state.cores==='number'?state.cores:MAX_CORES)+1);
     });
     if(state.burnLog)delete state.burnLog[t];
-    state.truce=state.truce||{}; state.truce[t]=1;
+    /* the day is refunded and re-judged, NOT struck from the campaign —
+       a truce would pause the yard and the forge and hide real risk. */
     state.lastTick=t; state.odCharged=0;
     state._rosterAmnesty=1;
   }
@@ -3413,6 +3415,17 @@ document.getElementById('fallRaze').addEventListener('click',()=>{
   document.getElementById('fallScreen').style.display='none';
   document.getElementById('resetBtn').click();
 });
+document.getElementById('clearTrucesBtn').addEventListener('click',()=>{
+  const t=state.truce||{}, days=Object.keys(t);
+  if(!days.length){alert('No truces stand.');return;}
+  if(!confirm('Lift all '+days.length+' truce day'+(days.length>1?'s':'')+'?\n\nThose days return to the campaign. The yard and the forge will count them again, so a cadence may fall due at once.\n\nNothing already honoured is lost.'))return;
+  state.truce={};
+  days.forEach(d=>{ if(state.settled)delete state.settled[d]; });
+  state.lastTick=todayISO();
+  save();renderAll();
+  proclaim(`⚑ THE FALSE TRUCES ARE LIFTED. ${days.length} day${days.length>1?'s return':' returns'} to the campaign — days struck out by the Chancery's own bookkeeping, not by any leave you asked for. The yard and the forge count them once more.`,'');
+  logMsg('<b style="color:#E8C558">⚑ '+days.length+' truce day'+(days.length>1?'s':'')+' lifted.</b> The campaign is whole again.');
+});
 document.getElementById('mercyBtn').addEventListener('click',()=>{
   const hp=baseHP(), rb=Math.max(0,(state.dmg||0)-BASE_MAX), dark=MAX_CORES-coresLeft();
   if(hp>=BASE_MAX&&!rb&&!dark){alert('The Citadel stands whole and every brazier burns. There is nothing to mend.');return;}
@@ -3455,7 +3468,7 @@ document.getElementById('resumeBtn').addEventListener('click',()=>{
   }
   if(state._rosterAmnesty){
     proclaim(`♦ THE ROLLS WERE REWRITTEN. Decrees were added to the campaign after this day had already begun — so this day is struck from the reckoning entirely. `+
-      `Damage undone, braziers relit, the host unpaid. A garrison is judged on the orders it was given, not the ones that arrived later.`,'');
+      `Damage undone and braziers relit — but the day still stands in the campaign, and the yard and the forge still count it.`,'');
     logMsg('<b style="color:#E8C558">♦ ROSTER AMNESTY.</b> The course list changed today — this day is struck from the reckoning, damage refunded and braziers relit.');
     delete state._rosterAmnesty; save();
   }
