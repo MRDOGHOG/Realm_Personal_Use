@@ -501,7 +501,10 @@ a.dest,.course,.week{border-radius:0}
       <div id="muster" style="font-size:13.5px;line-height:1.55"></div>
     </div>
     <div class="panel" style="margin-bottom:16px"><h2>The Chronicle</h2><div class="log" id="log"></div></div>
-        <div class="panel" style="margin-bottom:16px" id="supplyPanel"><h2>The Supply Train</h2>
+        <div class="panel" style="margin-bottom:16px" id="schoolPanel"><h2>The Schoolroom</h2>
+      <div id="schoolBody"></div>
+    </div>
+    <div class="panel" style="margin-bottom:16px" id="supplyPanel"><h2>The Supply Train</h2>
       <div id="supplyBody" style="font-size:14px;line-height:1.6"></div>
     </div>
     <div class="panel" style="margin-bottom:16px" id="syncPanel"><h2>The Raven — sync across devices</h2>
@@ -1062,7 +1065,7 @@ const BOSSES = [
 ];
 
 const BASE_MAX=1000, RUBBLE_MAX=600, OVERDUE_DMG=20, REPAIR=20, GYM_XP=45, GYM_PENALTY=20, READ_GAP=2, PAPER_CADENCE=3, PAPER_XP=45, FORGE_CADENCE=2, FORGE_XP=40, IDLE_MULT=5,
-      MAX_CORES=5, GRACE=2, REST_XP=30, GYM_CADENCE=2,
+      MAX_CORES=5, GRACE=2, REST_XP=30, GYM_CADENCE=2, SCHOOL_XP=25,
       BOSS_POOL_FRAC=0.24; /* warlord HP pool = 28% of total renown — only BREAKTHROUGH damage lands */
 
 /* ================= BUILD ITEM LIST ================= */
@@ -1325,7 +1328,8 @@ function save(){
 /* ================= DERIVED ================= */
 function earnedXP(){
   const tasks=ITEMS.filter(i=>state.done[i.id]).reduce((a,b)=>a+b.xp,0);
-  return tasks+(state.gymDays?state.gymDays.length:0)*GYM_XP+(state.forgeDays?state.forgeDays.length:0)*FORGE_XP+(state.paperDays?state.paperDays.length:0)*PAPER_XP+(state.restDays?state.restDays.length:0)*REST_XP;
+  return tasks+(state.gymDays?state.gymDays.length:0)*GYM_XP+(state.forgeDays?state.forgeDays.length:0)*FORGE_XP+(state.paperDays?state.paperDays.length:0)*PAPER_XP+(state.restDays?state.restDays.length:0)*REST_XP
+  +Object.keys(state.school||{}).reduce((a,k)=>a+schoolXpOn(k),0);
 }
 function taskXpOn(iso){
   let x=0,anyDecree=false;
@@ -1340,6 +1344,7 @@ function taskXpOn(iso){
   if((state.forgeDays||[]).includes(iso))x+=FORGE_XP;
   if((state.paperDays||[]).includes(iso))x+=PAPER_XP;
   if(anyDecree&&(state.restDays||[]).includes(iso))x+=REST_XP;
+  x+=schoolXpOn(iso);
   return x;
 }
 function gymLoggedOn(iso){return (state.gymDays||[]).includes(iso)}
@@ -2852,6 +2857,7 @@ function renderAll(){
   renderCourses();renderProjects();renderHUD();renderBoss();renderBase();renderDeadlines();renderShop();renderMuster();renderGym();renderForge();renderPaper();renderMarch();renderFall();
   if(typeof refreshBackdateUI==='function')refreshBackdateUI();
   if(typeof renderSupply==='function')renderSupply();
+  if(typeof renderSchool==='function')renderSchool();
 }
 
 /* ================= INTERACTION ================= */
@@ -2896,6 +2902,8 @@ function refreshBackdateUI(){
   tb.style.opacity=t?.45:1;
 }
 document.addEventListener('click',e=>{
+  const sc=e.target.closest('[data-sch]');
+  if(sc){schoolBump(sc.dataset.sch,+sc.dataset.d);return;}
   const mt=e.target.closest('.muster-toggle');
   if(mt){const d=mt.dataset.day;openDays.has(d)?openDays.delete(d):openDays.add(d);renderMuster();return;}
   const st=e.target.closest('[data-strike]');
@@ -3587,6 +3595,54 @@ function commitToggle(kind){
   if(past)unsettle(iso);
   save();renderAll();
   return !had;
+}
+
+/* ================= THE SCHOOLROOM ================= */
+/* the day school takes is still a day fought — half an hour a block, logged by subject */
+const SUBJECTS=[
+  {id:'bio',  n:'AP Biology'},
+  {id:'pre',  n:'AP Pre-Calculus'},
+  {id:'glob', n:'Global Studies'},
+  {id:'man',  n:'Mandarin'},
+  {id:'fr',   n:'French Composition'},
+  {id:'hea',  n:'Health'},
+  {id:'pe',   n:'Physical Education'}
+];
+function schoolOn(iso){return (state.school||{})[iso]||{}}
+function schoolBlocksOn(iso){const d=schoolOn(iso);return Object.values(d).reduce((a,b)=>a+b,0)}
+function schoolXpOn(iso){return schoolBlocksOn(iso)*SCHOOL_XP}
+function schoolBump(sid,delta){
+  const iso=logDate;
+  state.school=state.school||{};
+  const day=state.school[iso]=state.school[iso]||{};
+  const was=day[sid]||0, now=Math.max(0,Math.min(8,was+delta));
+  if(now===was)return;
+  day[sid]=now; if(!now)delete day[sid];
+  if(!Object.keys(day).length)delete state.school[iso];
+  if(iso!==todayISO())unsettle(iso); else { delta>0?repair(Math.round(repairValue()/2)):damageBase(Math.round(repairValue()/2)); }
+  save();renderAll();
+  if(delta>0){
+    const nm=(SUBJECTS.find(x=>x.id===sid)||{}).n||sid;
+    logMsg(`<b style="color:#6E9B4F">📖 ${nm}</b> — half an hour at the desk${iso!==todayISO()?' <b style="color:#D98E32">('+iso+')</b>':''}. <b>+${SCHOOL_XP} renown</b>.`);
+  }
+}
+function renderSchool(){
+  const el=document.getElementById('schoolBody'); if(!el)return;
+  const iso=logDate, day=schoolOn(iso), n=schoolBlocksOn(iso);
+  el.innerHTML=
+    `<div style="font-size:14px;color:var(--text-dim);font-style:italic;margin-bottom:10px">
+       ${n?`<b style="color:var(--gold-bright)">${n} block${n>1?'s':''}</b> at the desk${iso!==todayISO()?' on '+iso:' today'} — <b>+${n*SCHOOL_XP} renown</b>. Half an hour each.`
+          :`Nothing logged${iso!==todayISO()?' on '+iso:' today'}. Half an hour on any subject is ${SCHOOL_XP} renown.`}
+     </div>`+
+    SUBJECTS.map(sb=>{
+      const c=day[sb.id]||0;
+      return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dashed rgba(150,156,166,.12)">
+        <span style="flex:1;min-width:0;font-size:14.5px;${c?'color:var(--gold-bright)':''}">${sb.n}</span>
+        <span style="font-family:var(--font-d);font-size:13px;width:34px;text-align:center;color:${c?'var(--gold-bright)':'var(--dimmer,#4E566B)'}">${c?'●'.repeat(Math.min(c,4))+(c>4?'+':''):'—'}</span>
+        <button class="btn sch" data-sch="${sb.id}" data-d="-1" style="padding:2px 7px;font-size:11px">−</button>
+        <button class="btn sch" data-sch="${sb.id}" data-d="1" style="padding:2px 7px;font-size:11px">+</button>
+      </div>`;
+    }).join('');
 }
 
 /* ================= THE RAVEN — gist sync ================= */
